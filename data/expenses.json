@@ -1,0 +1,93 @@
+[
+    {
+        "amount": 45.50,
+        "description": "Lunch at Italian Restaurant",
+        "date": "2024-11-12T12:30:00",
+        "merchant": "Bella Italia"
+    },
+    {
+        "amount": 1200.00,
+        "description": "Monthly Rent Payment",
+        "date": "2024-11-01T09:00:00",
+        "merchant": "Property Management"
+    },
+    {
+        "amount": 85.75,
+        "description": "Grocery Shopping at Whole Foods",
+        "date": "2024-11-10T15:20:00",
+        "merchant": "Whole Foods"
+    },
+    {
+        "amount": 25.00,
+        "description": "Uber ride to airport",
+        "date": "2024-11-08T06:00:00",
+        "merchant": "Uber"
+    },
+    {
+        "amount": 350.00,
+        "description": "Flight ticket to New York",
+        "date": "2024-11-08T10:00:00",
+        "merchant": "Delta Airlines"
+    },
+    {
+        "amount": 150.00,
+        "description": "Hotel booking for business trip",
+        "date": "2024-11-08T14:00:00",
+        "merchant": "Marriott Hotel"
+    },
+    {
+        "amount": 12.99,
+        "description": "Netflix subscription",
+        "date": "2024-11-05T00:00:00",
+        "merchant": "Netflix"
+    },
+    {
+        "amount": 89.50,
+        "description": "Electricity bill",
+        "date": "2024-11-03T00:00:00",
+        "merchant": "Power Company"
+    },
+    {
+        "amount": 45.00,
+        "description": "Gym membership",
+        "date": "2024-11-01T00:00:00",
+        "merchant": "Fitness Center"
+    },
+    {
+        "amount": 200.00,
+        "description": "Shopping at Target - clothes and household items",
+        "date": "2024-11-11T16:30:00",
+        "merchant": "Target"
+    },
+    {
+        "amount": 35.25,
+        "description": "Coffee and breakfast at Starbucks",
+        "date": "2024-11-13T08:15:00",
+        "merchant": "Starbucks"
+    },
+    {
+        "amount": 125.00,
+        "description": "Gas station fill-up",
+        "date": "2024-11-13T18:30:00",
+        "merchant": "Shell Gas Station"
+    },
+    {
+        "amount": 299.99,
+        "description": "New headphones purchase",
+        "date": "2024-11-14T14:20:00",
+        "merchant": "Best Buy"
+    },
+    {
+        "amount": 60.00,
+        "description": "Dinner with friends at Mexican restaurant",
+        "date": "2024-11-14T19:45:00",
+        "merchant": "El Mariachi"
+    },
+    {
+        "amount": 15.00,
+        "description": "Movie tickets",
+        "date": "2024-11-15T20:00:00",
+        "merchant": "AMC Theaters"
+    }
+]
+
