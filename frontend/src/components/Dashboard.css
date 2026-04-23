@@ -153,3 +153,52 @@
   color: var(--primary);
 }
 
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.grid-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.grid-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.copilot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.progress-bar {
+    height: 8px;
+    background: #334155;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.progress-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.progress-fill.good { background: #10b981; }
+.progress-fill.warning { background: #f59e0b; }
+.progress-fill.critical { background: #ef4444; }
+
+.budget-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    margin-top: 1rem;
+}

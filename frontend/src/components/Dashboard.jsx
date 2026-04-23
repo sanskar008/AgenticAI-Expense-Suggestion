@@ -9,6 +9,9 @@ import {
 } from "react-icons/fa";
 import { expenseService } from "../services/api";
 import { formatCurrency } from "../utils/currency";
+import Analysis from './Analysis';
+import Copilot from './Copilot';
+import Chat from './Chat';
 import "./Dashboard.css";
 
 function Dashboard() {
