@@ -1,7 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/insight.dart';
-import '../services/mock_data_service.dart';
-
 import '../services/api_service.dart';
 
 class InsightsNotifier extends StateNotifier<List<Insight>> {

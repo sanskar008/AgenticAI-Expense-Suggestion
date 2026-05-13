@@ -10,7 +10,10 @@ import '../screens/login_screen.dart';
 import '../providers/auth_provider.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
+  // Use select to only rebuild when isAuthenticated changes.
+  // This prevents the router from rebuilding when phoneNumber or isLoading changes,
+  // which was causing the LoginScreen to reset its internal step state.
+  final isAuthenticated = ref.watch(authProvider.select((s) => s.isAuthenticated));
 
   return GoRouter(
     initialLocation: '/splash',
@@ -20,11 +23,11 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (isSplash) return null;
 
-      if (!authState.isAuthenticated && !isLogin) {
+      if (!isAuthenticated && !isLogin) {
         return '/login';
       }
 
-      if (authState.isAuthenticated && isLogin) {
+      if (isAuthenticated && isLogin) {
         return '/';
       }
 

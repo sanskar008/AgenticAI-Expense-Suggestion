@@ -27,12 +27,41 @@ class Goal {
   bool get isCompleted => savedAmount >= targetAmount;
   double get remainingAmount => (targetAmount - savedAmount).clamp(0.0, double.infinity);
 
-  Goal copyWith({double? savedAmount}) => Goal(
-        id: id,
-        title: title,
-        emoji: emoji,
-        targetAmount: targetAmount,
+  Goal copyWith({
+    String? id,
+    String? title,
+    String? emoji,
+    double? targetAmount,
+    double? savedAmount,
+    DateTime? deadline,
+  }) => Goal(
+        id: id ?? this.id,
+        title: title ?? this.title,
+        emoji: emoji ?? this.emoji,
+        targetAmount: targetAmount ?? this.targetAmount,
         savedAmount: savedAmount ?? this.savedAmount,
-        deadline: deadline,
+        deadline: deadline ?? this.deadline,
       );
+
+  factory Goal.fromJson(Map<String, dynamic> json) {
+    return Goal(
+      id: json['id']?.toString() ?? '',
+      title: json['name'] ?? json['title'] ?? 'Unnamed Goal',
+      emoji: json['emoji'] ?? '💰', // Default emoji
+      targetAmount: (json['target_amount'] ?? json['targetAmount'] as num).toDouble(),
+      savedAmount: (json['current_amount'] ?? json['savedAmount'] ?? 0 as num).toDouble(),
+      deadline: DateTime.parse(json['target_date'] ?? json['deadline'] ?? DateTime.now().toIso8601String()),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': title,
+      'emoji': emoji,
+      'target_amount': targetAmount,
+      'current_amount': savedAmount,
+      'target_date': deadline.toIso8601String(),
+    };
+  }
 }

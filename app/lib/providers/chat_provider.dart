@@ -1,10 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/chat_message.dart';
-import '../services/mock_data_service.dart';
 import '../services/api_service.dart';
 
 class ChatNotifier extends StateNotifier<List<ChatMessage>> {
-  ChatNotifier() : super(MockDataService.getInitialMessages());
+  ChatNotifier() : super([
+    ChatMessage(
+      id: '0',
+      content: 'Hello! I am your AI Finance Copilot. How can I help you today?',
+      sender: MessageSender.ai,
+      timestamp: DateTime.now(),
+    )
+  ]);
 
   int _counter = 100;
   String get _newId => 'msg_${_counter++}';
@@ -56,7 +62,14 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
   }
 
   void clearHistory() {
-    state = MockDataService.getInitialMessages();
+    state = [
+      ChatMessage(
+        id: '0',
+        content: 'Hello! I am your AI Finance Copilot. How can I help you today?',
+        sender: MessageSender.ai,
+        timestamp: DateTime.now(),
+      )
+    ];
   }
 }
 

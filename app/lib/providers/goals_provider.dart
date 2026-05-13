@@ -1,11 +1,26 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/goal.dart';
-import '../services/mock_data_service.dart';
+import '../services/api_service.dart';
 
 class GoalsNotifier extends StateNotifier<List<Goal>> {
-  GoalsNotifier() : super(MockDataService.getGoals());
+  GoalsNotifier() : super([]) {
+    fetchGoals();
+  }
+
+  Future<void> fetchGoals() async {
+    try {
+      final res = await ApiService.getGoals();
+      if (res['success'] == true && res['goals'] != null) {
+        final List<dynamic> goalsJson = res['goals'];
+        state = goalsJson.map((g) => Goal.fromJson(g)).toList();
+      }
+    } catch (e) {
+      print('Error fetching goals: $e');
+    }
+  }
 
   void addGoal(Goal goal) {
+    // Ideally call API here
     state = [goal, ...state];
   }
 

@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/expense.dart';
-import '../services/mock_data_service.dart';
 import '../services/api_service.dart';
 
 class ExpenseNotifier extends StateNotifier<List<Expense>> {
@@ -24,18 +23,28 @@ class ExpenseNotifier extends StateNotifier<List<Expense>> {
     try {
       final res = await ApiService.addExpenses([expense.toJson()]);
       if (res['success'] == true) {
-        // Refresh or just update local state
         fetchExpenses();
       }
     } catch (e) {
       print('Error adding expense: $e');
-      // Optimistic update fallback or error handling
     }
   }
 
-  void removeExpense(String id) {
-    // Implement delete API call if needed
-    state = state.where((e) => e.id != id).toList();
+  Future<void> removeExpense(String id) async {
+    try {
+      final intId = int.tryParse(id);
+      if (intId != null) {
+        final res = await ApiService.deleteExpense(intId);
+        if (res['success'] == true) {
+          state = state.where((e) => e.id != id).toList();
+        }
+      } else {
+        // Fallback for non-integer IDs if any
+        state = state.where((e) => e.id != id).toList();
+      }
+    } catch (e) {
+      print('Error deleting expense: $e');
+    }
   }
 }
 
