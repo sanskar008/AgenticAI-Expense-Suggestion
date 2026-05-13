@@ -9,6 +9,60 @@ const api = axios.create({
   },
 })
 
+// Request interceptor to add user ID to headers and log request
+api.interceptors.request.use((config) => {
+  const user = JSON.parse(localStorage.getItem('user'))
+  if (user && user.id) {
+    config.headers['X-User-Id'] = user.id
+  }
+  console.log(`🚀 [API Request] ${config.method.toUpperCase()} ${config.url}`, config.data || '')
+  return config
+})
+
+// Response interceptor to log response
+api.interceptors.response.use(
+  (response) => {
+    console.log(`✅ [API Response] ${response.config.method.toUpperCase()} ${response.config.url}`, response.data)
+    return response
+  },
+  (error) => {
+    console.error(`❌ [API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url}`, error.response?.data || error.message)
+    return Promise.reject(error)
+  }
+)
+
+export const authService = {
+  sendOtp: async (phoneNumber) => {
+    try {
+      const response = await api.post('/auth/send-otp', { phone_number: phoneNumber })
+      return response.data
+    } catch (error) {
+      console.error('Error sending OTP:', error)
+      throw error
+    }
+  },
+  verifyOtp: async (phoneNumber, otp) => {
+    try {
+      const response = await api.post('/auth/verify-otp', { phone_number: phoneNumber, otp })
+      if (response.data.success) {
+        localStorage.setItem('user', JSON.stringify(response.data.user))
+        localStorage.setItem('token', response.data.token)
+      }
+      return response.data
+    } catch (error) {
+      console.error('Error verifying OTP:', error)
+      throw error
+    }
+  },
+  logout: () => {
+    localStorage.removeItem('user')
+    localStorage.removeItem('token')
+  },
+  getCurrentUser: () => {
+    return JSON.parse(localStorage.getItem('user'))
+  }
+}
+
 export const expenseService = {
   // Get all expenses
   getExpenses: async () => {
@@ -100,4 +154,3 @@ export const expenseService = {
 }
 
 export default api
-

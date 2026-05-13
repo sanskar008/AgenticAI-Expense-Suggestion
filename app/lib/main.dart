@@ -28,13 +28,14 @@ class CopilotApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = ref.watch(themeProvider);
+    final router = ref.watch(routerProvider);
     return MaterialApp.router(
       title: 'AI Financial Copilot',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-      routerConfig: appRouter,
+      routerConfig: router,
     );
   }
 }

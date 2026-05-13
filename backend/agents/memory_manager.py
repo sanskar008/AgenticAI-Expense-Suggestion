@@ -281,12 +281,21 @@ class MemoryManager(Agent):
     def _retrieve_memory(self) -> Dict[str, Any]:
         """Retrieve stored expenses and insights"""
         user_id = self.context.get("user_id")
+        month = self.context.get("month")
+        year = self.context.get("year")
+        query = self.context.get("query")
+        
         if not user_id:
             logger.warning("No user_id provided for retrieving memory")
 
         results = {"expenses": [], "insights": [], "previous_analysis": None}
+        conn = None
 
         try:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
             # Retrieve expenses
             if month and year:
                 cursor.execute(
@@ -337,9 +346,10 @@ class MemoryManager(Agent):
                     results["previous_analysis"] = json.loads(row["analysis_data"])
 
         except Exception as e:
-            self.logger.error(f"Error retrieving memory: {e}")
+            self.logger.error(f"Error retrieving memory: {e}", exc_info=True)
         finally:
-            conn.close()
+            if conn:
+                conn.close()
 
         # Use AI to find relevant memories if query provided
         if query and self.model and results["insights"]:
@@ -509,14 +519,14 @@ class MemoryManager(Agent):
         finally:
             conn.close()
 
-    def is_notification_duplicate(self, content_hash: str) -> bool:
+    def is_notification_duplicate(self, user_id: int, content_hash: str) -> bool:
         """Check if notification with same hash was recently sent (last 24h)"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         try:
             cursor.execute(
-                "SELECT id FROM notifications WHERE hash = ? AND created_at > datetime('now', '-1 day')",
-                (content_hash,),
+                "SELECT id FROM notifications WHERE user_id = ? AND hash = ? AND created_at > datetime('now', '-1 day')",
+                (user_id, content_hash,),
             )
             return cursor.fetchone() is not None
         except Exception as e:
@@ -525,14 +535,14 @@ class MemoryManager(Agent):
         finally:
             conn.close()
 
-    def log_notification(self, title: str, message: str, content_hash: str):
+    def log_notification(self, user_id: int, title: str, message: str, content_hash: str):
         """Log a sent notification"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         try:
             cursor.execute(
-                "INSERT OR REPLACE INTO notifications (title, message, hash) VALUES (?, ?, ?)",
-                (title, message, content_hash),
+                "INSERT OR REPLACE INTO notifications (user_id, title, message, hash) VALUES (?, ?, ?, ?)",
+                (user_id, title, message, content_hash),
             )
             conn.commit()
         except Exception as e:
@@ -540,14 +550,14 @@ class MemoryManager(Agent):
         finally:
             conn.close()
 
-    def log_metric(self, name: str, value: float, metadata: Optional[Dict] = None):
+    def log_metric(self, user_id: int, name: str, value: float, metadata: Optional[Dict] = None):
         """Log a system metric"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         try:
             cursor.execute(
-                "INSERT INTO metrics (metric_name, value, metadata) VALUES (?, ?, ?)",
-                (name, value, json.dumps(metadata) if metadata else None),
+                "INSERT INTO metrics (user_id, metric_name, value, metadata) VALUES (?, ?, ?, ?)",
+                (user_id, name, value, json.dumps(metadata) if metadata else None),
             )
             conn.commit()
         except Exception as e:

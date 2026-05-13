@@ -1,15 +1,40 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/expense.dart';
 import '../services/mock_data_service.dart';
+import '../services/api_service.dart';
 
 class ExpenseNotifier extends StateNotifier<List<Expense>> {
-  ExpenseNotifier() : super(MockDataService.getExpenses());
+  ExpenseNotifier() : super([]) {
+    fetchExpenses();
+  }
 
-  void addExpense(Expense expense) {
-    state = [expense, ...state];
+  Future<void> fetchExpenses() async {
+    try {
+      final res = await ApiService.getExpenses();
+      if (res['success'] == true) {
+        final List<dynamic> expensesJson = res['expenses'];
+        state = expensesJson.map((e) => Expense.fromJson(e)).toList();
+      }
+    } catch (e) {
+      print('Error fetching expenses: $e');
+    }
+  }
+
+  Future<void> addExpense(Expense expense) async {
+    try {
+      final res = await ApiService.addExpenses([expense.toJson()]);
+      if (res['success'] == true) {
+        // Refresh or just update local state
+        fetchExpenses();
+      }
+    } catch (e) {
+      print('Error adding expense: $e');
+      // Optimistic update fallback or error handling
+    }
   }
 
   void removeExpense(String id) {
+    // Implement delete API call if needed
     state = state.where((e) => e.id != id).toList();
   }
 }

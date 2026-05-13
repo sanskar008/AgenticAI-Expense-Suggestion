@@ -25,4 +25,22 @@ class Budget {
         limit: limit,
         spent: spent ?? this.spent,
       );
+
+  factory Budget.fromJson(Map<String, dynamic> json) {
+    return Budget(
+      id: json['id']?.toString() ?? '',
+      category: _parseCategory(json['category']),
+      limit: (json['budget'] as num).toDouble(),
+      spent: (json['spent'] as num).toDouble(),
+    );
+  }
+
+  static ExpenseCategory _parseCategory(String? category) {
+    if (category == null) return ExpenseCategory.other;
+    final lower = category.toLowerCase();
+    for (final cat in ExpenseCategory.values) {
+      if (cat.displayName.toLowerCase() == lower) return cat;
+    }
+    return ExpenseCategory.other;
+  }
 }

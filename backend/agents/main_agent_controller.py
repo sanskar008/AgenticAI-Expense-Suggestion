@@ -162,35 +162,36 @@ class MainAgentController(Agent):
         context = self.context.copy()
         
         if agent_name == "extractor":
-            return f"Extract from: {self.context.get('input_data')}", {"input_data": self.context.get("input_data")}
+            return f"Extract from: {self.context.get('input_data')}", {"input_data": self.context.get("input_data"), "user_id": self.context.get("user_id")}
         
         elif agent_name == "classifier":
             expenses = results.get("extractor", {}).get("result", [])
-            return "Classify expenses", {"expenses": expenses}
+            return "Classify expenses", {"expenses": expenses, "user_id": self.context.get("user_id")}
         
         elif agent_name == "analyzer":
             expenses = results.get("classifier", {}).get("result", [])
-            prev_expenses = self.memory.get_previous_month_data()
-            return "Analyze spending", {"expenses": expenses, "previous_data": prev_expenses}
+            user_id = self.context.get("user_id")
+            prev_expenses = self.memory.get_previous_month_data(user_id=user_id) if hasattr(self.memory, 'get_previous_month_data_with_user') else self.memory.get_previous_month_data()
+            return "Analyze spending", {"expenses": expenses, "previous_data": prev_expenses, "user_id": user_id}
         
         elif agent_name == "memory":
             expenses = results.get("classifier", {}).get("result", [])
             analysis = results.get("analyzer", {}).get("result", {})
-            return "Store data", {"expenses": expenses, "analysis": analysis}
+            return "Store data", {"expenses": expenses, "analysis": analysis, "user_id": self.context.get("user_id")}
         
         elif agent_name == "budgeter":
             now = datetime.now()
-            return "Track budgets", {"month": now.month, "year": now.year}
+            return "Track budgets", {"month": now.month, "year": now.year, "user_id": self.context.get("user_id")}
         
         elif agent_name == "predictor":
-            return "Predict spending", {}
+            return "Predict spending", {"user_id": self.context.get("user_id")}
         
         elif agent_name == "goal_planner":
-            return "Analyze goals", {}
+            return "Analyze goals", {"user_id": self.context.get("user_id")}
         
         elif agent_name == "notifier":
             analysis = results.get("analyzer", {}).get("result", {})
-            return "Send notifications", {"analysis": analysis}
+            return "Send notifications", {"analysis": analysis, "user_id": self.context.get("user_id")}
 
         return f"Perform {agent_name} task", {}
 
@@ -268,14 +269,14 @@ class MainAgentController(Agent):
             "next_steps": [],
         }
 
-    def run(self, input_data: str) -> Dict[str, Any]:
+    def run(self, input_data: str, user_id: Optional[int] = None) -> Dict[str, Any]:
         """Main entry point to run the full agent pipeline with metric tracking"""
         import time
         start_time = time.time()
-        print("🤖 AGENTIC PERSONAL FINANCE MANAGER\n")
+        print(f"🤖 AGENTIC PERSONAL FINANCE MANAGER (User ID: {user_id})\n")
 
-        # Set input data in context
-        self.context = {"input_data": input_data}
+        # Set input data and user_id in context
+        self.context = {"input_data": input_data, "user_id": user_id}
 
         # Execute full cycle
         result = self.execute(
@@ -284,14 +285,14 @@ class MainAgentController(Agent):
         
         # Log metrics
         duration = time.time() - start_time
-        self.memory.log_metric("response_time", duration)
+        self.memory.log_metric(user_id, "response_time", duration)
         
         # Log classification accuracy (confidence)
         if result.get("result", {}).get("classifier"):
             conf = result["result"]["classifier"]["reflection"].get("insights", ["0.0"])[-1]
             try:
                 avg_conf = float(conf.split(": ")[1])
-                self.memory.log_metric("classification_confidence", avg_conf)
+                self.memory.log_metric(user_id, "classification_confidence", avg_conf)
             except: pass
 
         print(f"✅ EXECUTION COMPLETE (Duration: {duration:.2f}s)\n")

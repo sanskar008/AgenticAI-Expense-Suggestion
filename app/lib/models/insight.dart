@@ -44,4 +44,31 @@ class Insight {
         return const Color(0xFF74B9FF);
     }
   }
+
+  factory Insight.fromJson(Map<String, dynamic> json) {
+    return Insight(
+      id: json['id']?.toString() ?? '',
+      title: json['title'] ?? 'Insight',
+      description: json['insight_text'] ?? json['description'] ?? '',
+      type: _parseType(json['type']),
+      category: json['category'],
+      changePercent: json['change_percent'] != null ? (json['change_percent'] as num).toDouble() : null,
+    );
+  }
+
+  static InsightType _parseType(String? type) {
+    if (type == null) return InsightType.info;
+    switch (type.toLowerCase()) {
+      case 'alert':
+      case 'warning':
+        return InsightType.alert;
+      case 'tip':
+      case 'recommendation':
+        return InsightType.tip;
+      case 'trend':
+        return InsightType.trend;
+      default:
+        return InsightType.info;
+    }
+  }
 }

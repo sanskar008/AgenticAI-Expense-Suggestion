@@ -1,31 +1,54 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom'
 import Dashboard from './components/Dashboard'
 import Expenses from './components/Expenses'
 import AddExpense from './components/AddExpense'
 import Analysis from './components/Analysis'
-import { FaWallet, FaPlusCircle, FaList, FaChartBar } from 'react-icons/fa'
+import Login from './components/Login'
+import { FaWallet, FaPlusCircle, FaList, FaChartBar, FaSignOutAlt } from 'react-icons/fa'
+import { authService } from './services/api'
 import './App.css'
 
 function App() {
+  const [user, setUser] = useState(authService.getCurrentUser())
+
+  const handleLogin = (userData) => {
+    setUser(userData)
+  }
+
+  const handleLogout = () => {
+    authService.logout()
+    setUser(null)
+  }
+
   return (
     <Router>
       <div className="app">
-        <Navbar />
-        <main className="main-content">
+        {user ? (
+          <>
+            <Navbar onLogout={handleLogout} />
+            <main className="main-content">
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/expenses" element={<Expenses />} />
+                <Route path="/add" element={<AddExpense />} />
+                <Route path="/analysis" element={<Analysis />} />
+                <Route path="*" element={<Navigate to="/" />} />
+              </Routes>
+            </main>
+          </>
+        ) : (
           <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/expenses" element={<Expenses />} />
-            <Route path="/add" element={<AddExpense />} />
-            <Route path="/analysis" element={<Analysis />} />
+            <Route path="/login" element={<Login onLogin={handleLogin} />} />
+            <Route path="*" element={<Navigate to="/login" />} />
           </Routes>
-        </main>
+        )}
       </div>
     </Router>
   )
 }
 
-function Navbar() {
+function Navbar({ onLogout }) {
   const location = useLocation()
   
   const navItems = [
@@ -56,6 +79,10 @@ function Navbar() {
             </Link>
           )
         })}
+        <button onClick={onLogout} className="nav-link logout-btn">
+          <FaSignOutAlt size={20} />
+          <span>Logout</span>
+        </button>
       </div>
     </nav>
   )

@@ -101,4 +101,41 @@ class Expense {
       note: note ?? this.note,
     );
   }
+
+  factory Expense.fromJson(Map<String, dynamic> json) {
+    return Expense(
+      id: json['id']?.toString() ?? '',
+      title: json['description'] ?? json['title'] ?? '',
+      amount: (json['amount'] as num).toDouble(),
+      category: _parseCategory(json['category']),
+      date: DateTime.parse(json['date']),
+      note: json['merchant'] ?? json['note'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'description': title,
+      'amount': amount,
+      'category': category.displayName,
+      'date': date.toIsoformat(),
+      'merchant': note,
+    };
+  }
+
+  static ExpenseCategory _parseCategory(String? category) {
+    if (category == null) return ExpenseCategory.other;
+    final lower = category.toLowerCase();
+    for (final cat in ExpenseCategory.values) {
+      if (cat.displayName.toLowerCase() == lower) return cat;
+    }
+    return ExpenseCategory.other;
+  }
+}
+
+extension DateTimeIso on DateTime {
+  String toIsoformat() {
+    return toIso8601String();
+  }
 }
