@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../utils/app_colors.dart';
+import '../providers/auth_provider.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
@@ -18,8 +20,14 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _navigate() async {
+    // Artificial delay for splash branding
     await Future.delayed(const Duration(milliseconds: 2600));
-    if (mounted) context.go('/');
+    
+    if (mounted) {
+      // We go to home, and the GoRouter redirect logic in app_router.dart
+      // will handle moving the user to /landing, /login, or keeping them at /
+      context.go('/');
+    }
   }
 
   @override
@@ -75,7 +83,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 shaderCallback: (bounds) =>
                     AppColors.primaryGradient.createShader(bounds),
                 child: const Text(
-                  'Copilot',
+                  'FinTrack',
                   style: TextStyle(
                     fontSize: 42,
                     fontWeight: FontWeight.w800,
@@ -91,7 +99,7 @@ class _SplashScreenState extends State<SplashScreen> {
               const SizedBox(height: 8),
 
               Text(
-                'AI Financial Copilot',
+                'FinTrack AI',
                 style: TextStyle(
                   fontSize: 14,
                   color: AppColors.textSecondary,
@@ -122,7 +130,7 @@ class _SplashScreenState extends State<SplashScreen> {
               const SizedBox(height: 16),
 
               Text(
-                'Loading your finances...',
+                'Initializing...',
                 style: TextStyle(
                   fontSize: 12,
                   color: AppColors.textDisabled,

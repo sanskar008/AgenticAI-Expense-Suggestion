@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/budget.dart';
 import '../providers/budget_provider.dart';
 import '../utils/app_colors.dart';
 import '../utils/formatters.dart';
@@ -43,7 +45,10 @@ class BudgetScreen extends ConsumerWidget {
           // ── Budget Items ─────────────────────────────────────────
           ...budgets.asMap().entries.map((e) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: BudgetProgressCard(budget: e.value)
+                child: BudgetProgressCard(
+                  budget: e.value,
+                  onTap: () => _showEditBudget(context, ref, e.value),
+                )
                     .animate(delay: Duration(milliseconds: 50 * e.key))
                     .fadeIn(duration: 300.ms)
                     .slideX(begin: 0.1, end: 0, duration: 300.ms),
@@ -53,6 +58,39 @@ class BudgetScreen extends ConsumerWidget {
 
           // ── Tips Card ────────────────────────────────────────────
           _TipsCard(),
+        ],
+      ),
+    );
+  }
+
+  void _showEditBudget(BuildContext context, WidgetRef ref, Budget budget) {
+    final ctrl = TextEditingController(text: budget.limit.toStringAsFixed(0));
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Edit ${budget.category.displayName} Budget'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: const InputDecoration(
+            prefixText: '₹ ',
+            hintText: 'New Limit',
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              final amount = double.tryParse(ctrl.text);
+              if (amount != null) {
+                ref.read(budgetProvider.notifier).updateBudgetLimit(budget.category, amount);
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Save'),
+          ),
         ],
       ),
     );

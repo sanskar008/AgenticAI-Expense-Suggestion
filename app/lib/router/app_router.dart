@@ -7,28 +7,41 @@ import '../screens/main_navigation_screen.dart';
 import '../screens/predictions_screen.dart';
 import '../screens/splash_screen.dart';
 import '../screens/login_screen.dart';
+import '../screens/landing_screen.dart';
 import '../providers/auth_provider.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  // Use select to only rebuild when isAuthenticated changes.
-  // This prevents the router from rebuilding when phoneNumber or isLoading changes,
-  // which was causing the LoginScreen to reset its internal step state.
-  final isAuthenticated = ref.watch(authProvider.select((s) => s.isAuthenticated));
+  final authState = ref.watch(authProvider);
+  final isAuthenticated = authState.isAuthenticated;
+  final isFirstTime = authState.isFirstTime;
+  final isLoading = authState.isLoading;
 
   return GoRouter(
     initialLocation: '/splash',
     redirect: (context, state) {
       final isSplash = state.matchedLocation == '/splash';
+      final isLanding = state.matchedLocation == '/landing';
       final isLogin = state.matchedLocation == '/login';
 
-      if (isSplash) return null;
+      // If still loading initial auth state, stay on splash
+      if (isSplash && isLoading) return null;
 
-      if (!isAuthenticated && !isLogin) {
-        return '/login';
+      // Logic for Onboarding/Landing
+      if (isFirstTime && !isLanding && !isSplash) {
+        return '/landing';
       }
 
-      if (isAuthenticated && isLogin) {
-        return '/';
+      // Logic for Auth
+      if (!isAuthenticated) {
+        // If not authenticated, we either go to landing (if first time) or login
+        if (isFirstTime) {
+          if (!isLanding && !isSplash) return '/landing';
+        } else {
+          if (!isLogin && !isSplash && !isLanding) return '/login';
+        }
+      } else {
+        // If authenticated, don't allow landing or login
+        if (isLogin || isLanding || isSplash) return '/';
       }
 
       return null;
@@ -37,6 +50,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/splash',
         builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/landing',
+        builder: (context, state) => const LandingScreen(),
       ),
       GoRoute(
         path: '/login',

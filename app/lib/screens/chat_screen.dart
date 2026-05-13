@@ -75,7 +75,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('AI Copilot', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                Text('FinTrack AI', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                 Text('Always here to help', style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w400)),
               ],
             ),

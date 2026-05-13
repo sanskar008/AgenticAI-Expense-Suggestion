@@ -92,7 +92,8 @@ class GoalsScreen extends ConsumerWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (_) => _AddGoalSheet(
-        onAdd: (goal) => ref.read(goalsProvider.notifier).addGoal(goal),
+        onAdd: (name, target, date, emoji) => 
+            ref.read(goalsProvider.notifier).addGoal(name, target, date, emoji),
       ),
     );
   }
@@ -467,7 +468,7 @@ class _EmptyGoals extends StatelessWidget {
 }
 
 class _AddGoalSheet extends StatefulWidget {
-  final ValueChanged<Goal> onAdd;
+  final Function(String, double, DateTime, String) onAdd;
   const _AddGoalSheet({required this.onAdd});
 
   @override
@@ -617,14 +618,12 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
               child: ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
-                    widget.onAdd(Goal(
-                      id: 'g_${DateTime.now().millisecondsSinceEpoch}',
-                      title: _titleCtrl.text.trim(),
-                      emoji: _selectedEmoji,
-                      targetAmount: double.parse(_targetCtrl.text),
-                      savedAmount: 0,
-                      deadline: _deadline,
-                    ));
+                    widget.onAdd(
+                      _titleCtrl.text.trim(),
+                      double.parse(_targetCtrl.text),
+                      _deadline,
+                      _selectedEmoji,
+                    );
                     Navigator.pop(context);
                   }
                 },

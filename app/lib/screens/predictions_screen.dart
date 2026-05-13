@@ -67,9 +67,12 @@ class PredictionsScreen extends ConsumerWidget {
   }
 }
 
-class _PredictionHeroCard extends StatelessWidget {
+class _PredictionHeroCard extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final data = ref.watch(predictionsProvider);
+    final predicted = data['predicted_total'] ?? 0.0;
+    
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -86,13 +89,13 @@ class _PredictionHeroCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.auto_awesome_rounded, color: Colors.white70, size: 16),
-              SizedBox(width: 6),
+              const Icon(Icons.auto_awesome_rounded, color: Colors.white70, size: 16),
+              const SizedBox(width: 6),
               Text(
-                'AI Prediction',
-                style: TextStyle(fontSize: 12, color: Colors.white70),
+                'AI Prediction (${data['confidence'] ?? 'low'} confidence)',
+                style: const TextStyle(fontSize: 12, color: Colors.white70),
               ),
             ],
           ),
@@ -106,9 +109,9 @@ class _PredictionHeroCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            '₹28,500',
-            style: TextStyle(
+          Text(
+            Formatters.currency(predicted.toDouble()),
+            style: const TextStyle(
               fontSize: 38,
               fontWeight: FontWeight.w800,
               color: Colors.white,
@@ -118,11 +121,9 @@ class _PredictionHeroCard extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              _StatPill(label: 'Spent so far', value: '₹23,226'),
+              _StatPill(label: 'Confidence', value: (data['confidence'] ?? 'low').toString().toUpperCase()),
               const SizedBox(width: 12),
-              _StatPill(label: 'Days left', value: '7 days'),
-              const SizedBox(width: 12),
-              _StatPill(label: 'Daily avg', value: '₹996'),
+              _StatPill(label: 'Updated', value: 'Today'),
             ],
           ),
         ],

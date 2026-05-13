@@ -19,23 +19,40 @@ class GoalsNotifier extends StateNotifier<List<Goal>> {
     }
   }
 
-  void addGoal(Goal goal) {
-    // Ideally call API here
-    state = [goal, ...state];
+  Future<void> addGoal(String name, double targetAmount, DateTime deadline, String emoji) async {
+    try {
+      final res = await ApiService.createGoal({
+        'name': name,
+        'target_amount': targetAmount,
+        'target_date': deadline.toIso8601String(),
+        'emoji': emoji,
+      });
+      if (res['success'] == true) {
+        fetchGoals();
+      }
+    } catch (e) {
+      print('Error creating goal: $e');
+    }
   }
 
-  void removeGoal(String id) {
+  Future<void> removeGoal(String id) async {
+    // Backend doesn't have a specific goal delete endpoint yet, 
+    // but we can update local state for now.
     state = state.where((g) => g.id != id).toList();
   }
 
-  void addSavings(String id, double amount) {
-    state = [
-      for (final g in state)
-        if (g.id == id)
-          g.copyWith(savedAmount: (g.savedAmount + amount).clamp(0, g.targetAmount))
-        else
-          g,
-    ];
+  Future<void> addSavings(String id, double amount) async {
+    try {
+      final intId = int.tryParse(id);
+      if (intId != null) {
+        final res = await ApiService.addGoalSavings(intId, amount);
+        if (res['success'] == true) {
+          fetchGoals();
+        }
+      }
+    } catch (e) {
+      print('Error adding savings: $e');
+    }
   }
 }
 

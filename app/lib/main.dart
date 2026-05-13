@@ -19,18 +19,18 @@ void main() {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
-  runApp(const ProviderScope(child: CopilotApp()));
+  runApp(const ProviderScope(child: FinTrackApp()));
 }
 
-class CopilotApp extends ConsumerWidget {
-  const CopilotApp({super.key});
+class FinTrackApp extends ConsumerWidget {
+  const FinTrackApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = ref.watch(themeProvider);
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
-      title: 'AI Financial Copilot',
+      title: 'FinTrack AI',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

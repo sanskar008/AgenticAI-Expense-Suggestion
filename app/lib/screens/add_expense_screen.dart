@@ -68,10 +68,6 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
     );
 
     ref.read(expenseProvider.notifier).addExpense(expense);
-    ref.read(budgetProvider.notifier).updateSpent(
-          _selectedCategory,
-          expense.amount,
-        );
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

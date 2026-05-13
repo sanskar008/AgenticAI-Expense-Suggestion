@@ -45,8 +45,8 @@ swagger_config = {
 template = {
     "swagger": "2.0",
     "info": {
-        "title": "Agentic AI Expense Manager API",
-        "description": "API documentation for the Agentic Personal Finance Manager",
+        "title": "FinTrack AI API",
+        "description": "API documentation for the FinTrack AI Personal Finance Manager",
         "version": "1.0.0"
     },
     "securityDefinitions": {
@@ -179,6 +179,58 @@ def verify_otp():
     except Exception as e:
         logger.error(f"Auth error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/profile', methods=['GET'])
+def get_profile():
+    """Get user profile"""
+    user_id = get_user_id()
+    if not user_id:
+        return jsonify({"success": False, "error": "Authentication required"}), 401
+    
+    import sqlite3
+    conn = sqlite3.connect(memory_manager.db_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, phone_number, name, email, membership_status, created_at FROM users WHERE id = ?", (user_id,))
+    user = cursor.fetchone()
+    conn.close()
+    
+    if user:
+        return jsonify({"success": True, "user": dict(user)})
+    return jsonify({"success": False, "error": "User not found"}), 404
+
+@app.route('/api/profile', methods=['PUT'])
+def update_profile():
+    """Update user profile"""
+    user_id = get_user_id()
+    if not user_id:
+        return jsonify({"success": False, "error": "Authentication required"}), 401
+    
+    data = request.get_json()
+    success = memory_manager.update_profile(user_id, name=data.get('name'), email=data.get('email'))
+    return jsonify({"success": success})
+
+@app.route('/api/settings', methods=['GET'])
+def get_settings():
+    """Get user settings"""
+    user_id = get_user_id()
+    if not user_id:
+        return jsonify({"success": False, "error": "Authentication required"}), 401
+    
+    settings = memory_manager.get_settings(user_id)
+    return jsonify({"success": True, "settings": settings})
+
+@app.route('/api/settings', methods=['POST'])
+def update_settings():
+    """Update user settings"""
+    user_id = get_user_id()
+    if not user_id:
+        return jsonify({"success": False, "error": "Authentication required"}), 401
+    
+    data = request.get_json()
+    success = memory_manager.update_settings(user_id, data)
+    return jsonify({"success": success})
 
 
 @app.route('/api/health', methods=['GET'])
@@ -370,6 +422,8 @@ def delete_expense(expense_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+
+
 @app.route('/api/analysis', methods=['GET'])
 def get_analysis():
     """
@@ -493,20 +547,7 @@ def get_insights():
         from utils.helpers import get_current_month
         year, month = get_current_month()
         
-        import sqlite3
-        conn = sqlite3.connect(memory_manager.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            SELECT * FROM insights
-            WHERE user_id = ? AND year = ? AND month = ?
-            ORDER BY created_at DESC
-        """, (user_id, year, month))
-        
-        insights = [dict(row) for row in cursor.fetchall()]
-        conn.close()
-        
+        insights = memory_manager.get_insights(user_id, month, year)
         return jsonify({"success": True, "insights": insights})
         
     except Exception as e:
@@ -628,6 +669,26 @@ def get_budgets():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/api/budgets', methods=['POST'])
+def set_budget():
+    """Set or update a budget"""
+    user_id = get_user_id()
+    if not user_id:
+        return jsonify({"success": False, "error": "Authentication required"}), 401
+    
+    data = request.get_json()
+    from utils.helpers import get_current_month
+    year, month = get_current_month()
+    
+    success = memory_manager.set_budget(
+        user_id, 
+        data.get('category'), 
+        data.get('amount'), 
+        data.get('month', month), 
+        data.get('year', year)
+    )
+    return jsonify({"success": success})
+
 @app.route('/api/predictions', methods=['GET'])
 def get_predictions():
     """
@@ -674,6 +735,34 @@ def get_goals():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route('/api/goals', methods=['POST'])
+def create_goal():
+    """Create a new goal"""
+    user_id = get_user_id()
+    if not user_id:
+        return jsonify({"success": False, "error": "Authentication required"}), 401
+    
+    data = request.get_json()
+    success = memory_manager.create_goal(
+        user_id,
+        data.get('name'),
+        data.get('target_amount'),
+        data.get('target_date'),
+        data.get('emoji', '💰')
+    )
+    return jsonify({"success": success})
+
+@app.route('/api/goals/<int:goal_id>', methods=['PUT'])
+def update_goal(goal_id):
+    """Add savings to a goal"""
+    user_id = get_user_id()
+    if not user_id:
+        return jsonify({"success": False, "error": "Authentication required"}), 401
+    
+    data = request.get_json()
+    success = memory_manager.update_goal_progress(user_id, goal_id, data.get('amount', 0))
+    return jsonify({"success": success})
+
 @app.route('/api/chat', methods=['POST'])
 def chat():
     """
@@ -717,6 +806,58 @@ def chat():
         return jsonify({"success": True, "response": response, "data": result})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/notifications', methods=['GET'])
+def get_notifications():
+    """Get notification history"""
+    user_id = get_user_id()
+    if not user_id:
+        return jsonify({"success": False, "error": "Authentication required"}), 401
+    
+    notifications = memory_manager.get_notifications(user_id)
+    return jsonify({"success": True, "notifications": notifications})
+
+@app.route('/api/account/reset', methods=['POST'])
+def reset_account():
+    """Reset user account"""
+    user_id = get_user_id()
+    if not user_id:
+        return jsonify({"success": False, "error": "Authentication required"}), 401
+    
+    success = memory_manager.reset_account(user_id)
+    return jsonify({"success": success})
+
+@app.route('/api/export', methods=['GET'])
+def export_data():
+    """Export user data as CSV"""
+    user_id = get_user_id()
+    if not user_id:
+        return jsonify({"success": False, "error": "Authentication required"}), 401
+    
+    import sqlite3
+    import csv
+    import io
+    from flask import make_response
+    
+    conn = sqlite3.connect(memory_manager.db_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM expenses WHERE user_id = ? ORDER BY date DESC", (user_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    if rows:
+        writer.writerow(rows[0].keys())
+        for row in rows:
+            writer.writerow(dict(row).values())
+    
+    response = make_response(output.getvalue())
+    response.headers["Content-Disposition"] = "attachment; filename=expenses.csv"
+    response.headers["Content-type"] = "text/csv"
+    return response
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))

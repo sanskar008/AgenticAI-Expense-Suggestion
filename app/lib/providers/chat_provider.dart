@@ -6,7 +6,7 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
   ChatNotifier() : super([
     ChatMessage(
       id: '0',
-      content: 'Hello! I am your AI Finance Copilot. How can I help you today?',
+      content: 'Hello! I am your FinTrack AI assistant. How can I help you today?',
       sender: MessageSender.ai,
       timestamp: DateTime.now(),
     )
@@ -65,7 +65,7 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
     state = [
       ChatMessage(
         id: '0',
-        content: 'Hello! I am your AI Finance Copilot. How can I help you today?',
+        content: 'Hello! I am your FinTrack AI assistant. How can I help you today?',
         sender: MessageSender.ai,
         timestamp: DateTime.now(),
       )

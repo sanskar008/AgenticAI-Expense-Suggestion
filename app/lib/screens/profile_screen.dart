@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/auth_provider.dart';
 import '../providers/expense_provider.dart';
 import '../providers/goals_provider.dart';
 import '../providers/theme_provider.dart';
+import '../services/api_service.dart';
 import '../utils/app_colors.dart';
 import '../utils/formatters.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -13,6 +16,9 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = ref.watch(themeProvider);
+    final authState = ref.watch(authProvider);
+    final user = authState.user;
+    
     final total = ref.watch(totalSpendingProvider);
     final totalSaved = ref.watch(totalSavedProvider);
     final expenseCount = ref.watch(currentMonthExpensesProvider).length;
@@ -24,7 +30,7 @@ class ProfileScreen extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
         children: [
           // ── Profile Card ─────────────────────────────────────────
-          _ProfileCard()
+          _ProfileCard(user: user)
               .animate()
               .fadeIn(duration: 400.ms)
               .slideY(begin: 0.2, end: 0, duration: 400.ms),
@@ -75,7 +81,7 @@ class ProfileScreen extends ConsumerWidget {
             title: 'Dark Mode',
             trailing: Switch(
               value: isDark,
-              onChanged: (v) => ref.read(themeProvider.notifier).state = v,
+              onChanged: (v) => ref.read(themeProvider.notifier).toggleTheme(v),
               activeColor: AppColors.primary,
             ),
           ),
@@ -91,40 +97,33 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
 
-          _SettingsTile(
-            icon: Icons.currency_rupee_rounded,
-            iconColor: AppColors.success,
-            title: 'Currency',
-            subtitle: 'Indian Rupee (₹)',
-            onTap: () {},
-          ),
-
           const SizedBox(height: 20),
 
-          const _SectionLabel(label: 'Data'),
+          const _SectionLabel(label: 'Data & Account'),
           const SizedBox(height: 8),
 
           _SettingsTile(
-            icon: Icons.cloud_upload_rounded,
-            iconColor: AppColors.cyan,
-            title: 'Sync to Cloud',
-            subtitle: 'Connect to Flask backend',
-            onTap: () => _showComingSoon(context, 'Cloud Sync'),
+            icon: Icons.edit_rounded,
+            iconColor: AppColors.primary,
+            title: 'Edit Profile',
+            subtitle: 'Update your name and email',
+            onTap: () => _showEditProfile(context, ref, user),
           ),
 
           _SettingsTile(
             icon: Icons.download_rounded,
             iconColor: AppColors.info,
-            title: 'Export Data',
-            subtitle: 'CSV / PDF',
-            onTap: () => _showComingSoon(context, 'Export'),
+            title: 'Export Data (CSV)',
+            subtitle: 'Download your expense history',
+            onTap: () => _launchUrl(ApiService.exportUrl),
           ),
 
           _SettingsTile(
             icon: Icons.delete_sweep_rounded,
             iconColor: AppColors.error,
-            title: 'Clear All Data',
-            onTap: () => _showClearDialog(context),
+            title: 'Reset Account',
+            subtitle: 'Wipe all data from the server',
+            onTap: () => _showResetDialog(context, ref),
           ),
 
           const SizedBox(height: 20),
@@ -136,25 +135,15 @@ class ProfileScreen extends ConsumerWidget {
             icon: Icons.info_rounded,
             iconColor: AppColors.textSecondary,
             title: 'Version',
-            subtitle: 'AI Financial Copilot v1.0.0',
-          ),
-
-          _SettingsTile(
-            icon: Icons.code_rounded,
-            iconColor: AppColors.textSecondary,
-            title: 'Built with Flutter + Riverpod',
-            subtitle: 'Ready for Flask API integration',
+            subtitle: 'FinTrack AI v1.1.0 (Live Backend)',
           ),
 
           const SizedBox(height: 24),
 
           Center(
-            child: Text(
-              '💙 Built for Financial Freedom',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textDisabled,
-              ),
+            child: TextButton(
+              onPressed: () => ref.read(authProvider.notifier).logout(),
+              child: const Text('LOGOUT', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -162,33 +151,58 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature – coming soon!'),
-        backgroundColor: AppColors.primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  void _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri)) {
+      debugPrint('Could not launch $url');
+    }
+  }
+
+  void _showEditProfile(BuildContext context, WidgetRef ref, Map<String, dynamic>? user) {
+    final nameController = TextEditingController(text: user?['name'] ?? '');
+    final emailController = TextEditingController(text: user?['email'] ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Profile'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Full Name')),
+            TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Email')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              await ref.read(authProvider.notifier).updateProfile(nameController.text, emailController.text);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
+          ),
+        ],
       ),
     );
   }
 
-  void _showClearDialog(BuildContext context) {
+  void _showResetDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Clear All Data?'),
-        content: const Text(
-            'This will reset all expenses, budgets, and goals. This cannot be undone.'),
+        title: const Text('Reset All Data?'),
+        content: const Text('This will permanently delete all your expenses, budgets, and goals from the server.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () async {
+              await ApiService.resetAccount();
+              ref.read(authProvider.notifier).logout();
+              Navigator.pop(ctx);
+            },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Clear'),
+            child: const Text('Reset Everything'),
           ),
         ],
       ),
@@ -197,6 +211,9 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 class _ProfileCard extends StatelessWidget {
+  final Map<String, dynamic>? user;
+  const _ProfileCard({this.user});
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -228,18 +245,18 @@ class _ProfileCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Sanskar Koserwal',
-                  style: TextStyle(
+                Text(
+                  user?['name'] ?? 'FinTrack User',
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'anmol.lh@gmail.com',
-                  style: TextStyle(fontSize: 13, color: Colors.white70),
+                Text(
+                  user?['email'] ?? user?['phone_number'] ?? 'No email set',
+                  style: const TextStyle(fontSize: 13, color: Colors.white70),
                 ),
                 const SizedBox(height: 8),
                 Container(
@@ -248,9 +265,9 @@ class _ProfileCard extends StatelessWidget {
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text(
-                    '✨ Premium Member',
-                    style: TextStyle(
+                  child: Text(
+                    '✨ ${user?['membership_status'] ?? 'Free Member'}',
+                    style: const TextStyle(
                       fontSize: 11,
                       color: Colors.white,
                       fontWeight: FontWeight.w600,

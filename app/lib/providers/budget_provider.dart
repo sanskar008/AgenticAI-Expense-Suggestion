@@ -21,30 +21,28 @@ class BudgetNotifier extends StateNotifier<List<Budget>> {
     }
   }
 
+  Future<void> updateBudgetLimit(ExpenseCategory category, double amount) async {
+    try {
+      final res = await ApiService.setBudget(category.displayName, amount);
+      if (res['success'] == true) {
+        fetchBudgets();
+      }
+    } catch (e) {
+      print('Error updating budget: $e');
+    }
+  }
+
   void syncWithExpenses(Map<ExpenseCategory, double> spending) {
     state = [
       for (final b in state)
         b.copyWith(spent: spending[b.category] ?? 0),
     ];
   }
-
-  void addToSpent(ExpenseCategory category, double amount) {
-    state = [
-      for (final b in state)
-        if (b.category == category)
-          b.copyWith(spent: b.spent + amount)
-        else
-          b,
-    ];
-  }
-
-  void updateSpent(ExpenseCategory category, double amount) => addToSpent(category, amount);
 }
 
 final budgetProvider =
     StateNotifierProvider<BudgetNotifier, List<Budget>>((ref) {
   final notifier = BudgetNotifier();
-  // Keep budgets in sync with the expense list's monthly totals
   ref.listen<Map<ExpenseCategory, double>>(categorySpendingProvider, (_, map) {
     notifier.syncWithExpenses(map);
   });
