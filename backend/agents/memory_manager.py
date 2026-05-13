@@ -102,25 +102,47 @@ class MemoryManager(Agent):
 
     def _store_memory(self) -> Dict[str, Any]:
         """Store expense data and generated insights"""
-        input_data = self.context.get("input_data", {})
         user_id = self.context.get("user_id")
+        expenses = self.context.get("expenses", [])
+        analysis = self.context.get("analysis", {})
         
-        if not input_data:
-            return {"success": False, "error": "No input data to store"}
-
         try:
-            # Store insights if present
-            if "insights" in input_data:
-                self._store_insights(user_id, input_data["insights"])
+            # Store expenses
+            if expenses:
+                self._store_expenses(user_id, expenses)
             
-            # Store analysis if present
-            if "analysis" in input_data:
-                self._store_analysis(user_id, input_data["analysis"])
+            # Store analysis results (insights)
+            if analysis and "insights" in analysis:
+                self._store_insights(user_id, analysis["insights"])
+            
+            if analysis:
+                self._store_analysis(user_id, analysis)
 
             return {"success": True, "message": "Memory stored successfully"}
         except Exception as e:
-            self.logger.error(f"Error storing memory: {e}")
+            self.logger.error(f"Error storing memory: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
+
+    def _store_expenses(self, user_id: int, expenses: List[Dict]):
+        """Persist expenses to database"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        for exp in expenses:
+            cursor.execute(
+                """INSERT INTO expenses 
+                   (user_id, amount, description, category, date, merchant) 
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (
+                    user_id,
+                    exp.get('amount', 0),
+                    exp.get('description', ''),
+                    exp.get('category', 'Miscellaneous'),
+                    exp.get('date', datetime.now().isoformat()),
+                    exp.get('merchant', '')
+                ),
+            )
+        conn.commit()
+        conn.close()
 
     def _store_insights(self, user_id: int, insights: List[Dict]):
         now = datetime.now()
@@ -415,3 +437,17 @@ class MemoryManager(Agent):
         except Exception as e:
             self.logger.error(f"Error getting notifications: {e}")
             return []
+
+    def log_metric(self, user_id: int, metric_name: str, value: float):
+        """Log a performance or accuracy metric"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO metrics (user_id, metric_name, value) VALUES (?, ?, ?)",
+                (user_id, metric_name, value)
+            )
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            self.logger.error(f"Error logging metric: {e}")

@@ -26,6 +26,27 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*", "allow_headers": ["Content-Type", "X-User-Id"]}})  # Enable CORS for frontend
 
+@app.before_request
+def log_request_info():
+    logger.info("---------- 🚀 API REQUEST ----------")
+    logger.info(f"Method: {request.method}")
+    logger.info(f"Path: {request.path}")
+    if request.is_json:
+        logger.info(f"Payload: {json.dumps(request.json, indent=2)}")
+    logger.info("------------------------------------")
+
+@app.after_request
+def log_response_info(response):
+    logger.info("---------- ✅ API RESPONSE ----------")
+    logger.info(f"Status: {response.status}")
+    if response.is_json:
+        try:
+            logger.info(f"Data: {json.dumps(response.get_json(), indent=2)}")
+        except:
+            logger.info("Data: [JSON Decode Failed]")
+    logger.info("------------------------------------")
+    return response
+
 # Initialize Swagger
 swagger_config = {
     "headers": [],
@@ -359,8 +380,8 @@ def add_expenses():
         # Extract results
         if result.get("result"):
             results = result["result"]
-            classified_expenses = results.get("classification", {}).get("result", expenses)
-            analysis = results.get("analysis", {}).get("result", {})
+            classified_expenses = results.get("classifier", {}).get("result", expenses)
+            analysis = results.get("analyzer", {}).get("result", {})
             
             return jsonify({
                 "success": True,
@@ -800,8 +821,8 @@ def chat():
         response = "I've analyzed your data. "
         if result.get("result"):
             res = result["result"]
-            if "analysis" in res:
-                response += " ".join(res["analysis"].get("result", {}).get("insights", []))
+            if "analyzer" in res:
+                response += " ".join(res["analyzer"].get("result", {}).get("insights", []))
         
         return jsonify({"success": True, "response": response, "data": result})
     except Exception as e:

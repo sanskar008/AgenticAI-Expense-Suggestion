@@ -29,7 +29,11 @@ class GoalPlanningAgent(Agent):
 
     def act(self, plan: Dict[str, Any]) -> Any:
         """Execute goal planning operation"""
-        goals = self.memory.get_goals()
+        user_id = self.context.get("user_id")
+        if not user_id:
+            return {"plans": [], "message": "No user ID provided"}
+
+        goals = self.memory.get_goals(user_id)
         if not goals:
             return {"plans": [], "message": "No active goals found"}
 
@@ -60,7 +64,8 @@ class GoalPlanningAgent(Agent):
 
         # Get spending to suggest reductions
         now = datetime.now()
-        spending = self.memory.get_spending_by_category(now.month, now.year)
+        user_id = self.context.get("user_id")
+        spending = self.memory.get_spending_by_category(user_id, now.month, now.year)
         
         # Simple reduction logic: Suggest 10% reduction in top 3 categories
         sorted_spending = sorted(spending.items(), key=lambda x: x[1], reverse=True)

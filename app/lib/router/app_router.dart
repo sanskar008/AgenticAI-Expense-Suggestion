@@ -11,10 +11,12 @@ import '../screens/landing_screen.dart';
 import '../providers/auth_provider.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
-  final isAuthenticated = authState.isAuthenticated;
-  final isFirstTime = authState.isFirstTime;
-  final isLoading = authState.isLoading;
+  // Stable watch: only rebuild when critical auth/onboarding states change.
+  // We explicitly EXCLUDE 'isLoading' here to prevent UI resets during API calls.
+  final authData = ref.watch(authProvider.select((s) => (s.isAuthenticated, s.isFirstTime, s.isInitialized)));
+  final isAuthenticated = authData.$1;
+  final isFirstTime = authData.$2;
+  final isInitialized = authData.$3;
 
   return GoRouter(
     initialLocation: '/splash',
@@ -24,7 +26,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLogin = state.matchedLocation == '/login';
 
       // If still loading initial auth state, stay on splash
-      if (isSplash && isLoading) return null;
+      if (isSplash && !isInitialized) return null;
 
       // Logic for Onboarding/Landing
       if (isFirstTime && !isLanding && !isSplash) {
