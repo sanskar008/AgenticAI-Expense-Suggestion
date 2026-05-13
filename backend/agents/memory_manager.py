@@ -196,15 +196,20 @@ class MemoryManager(Agent):
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
+        user_id = self.context.get("user_id")
+        if not user_id:
+            logger.warning("No user_id provided for storing memory")
+
         try:
             # Store expenses
             for expense in expenses:
                 cursor.execute(
                     """
-                    INSERT INTO expenses (amount, description, category, date, merchant, source)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO expenses (user_id, amount, description, category, date, merchant, source)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                     (
+                        user_id,
                         expense.get("amount", 0),
                         expense.get("description", ""),
                         expense.get("category", "Other"),
@@ -228,10 +233,10 @@ class MemoryManager(Agent):
                 analysis_json = json.dumps(analysis)
                 cursor.execute(
                     """
-                    INSERT OR REPLACE INTO analysis_cache (month, year, analysis_data)
-                    VALUES (?, ?, ?)
+                    INSERT OR REPLACE INTO analysis_cache (user_id, month, year, analysis_data)
+                    VALUES (?, ?, ?, ?)
                 """,
-                    (month, year, analysis_json),
+                    (user_id, month, year, analysis_json),
                 )
 
                 # Store individual insights
@@ -239,10 +244,10 @@ class MemoryManager(Agent):
                 for insight in insights:
                     cursor.execute(
                         """
-                        INSERT OR IGNORE INTO insights (month, year, insight_type, content, metadata)
-                        VALUES (?, ?, ?, ?, ?)
+                        INSERT OR IGNORE INTO insights (user_id, month, year, insight_type, content, metadata)
+                        VALUES (?, ?, ?, ?, ?, ?)
                     """,
-                        (month, year, "insight", insight, json.dumps({})),
+                        (user_id, month, year, "insight", insight, json.dumps({})),
                     )
                     insights_stored += 1
 
@@ -251,10 +256,10 @@ class MemoryManager(Agent):
                 for rec in recommendations:
                     cursor.execute(
                         """
-                        INSERT OR IGNORE INTO insights (month, year, insight_type, content, metadata)
-                        VALUES (?, ?, ?, ?, ?)
+                        INSERT OR IGNORE INTO insights (user_id, month, year, insight_type, content, metadata)
+                        VALUES (?, ?, ?, ?, ?, ?)
                     """,
-                        (month, year, "recommendation", rec, json.dumps({})),
+                        (user_id, month, year, "recommendation", rec, json.dumps({})),
                     )
                     insights_stored += 1
 
@@ -275,13 +280,9 @@ class MemoryManager(Agent):
 
     def _retrieve_memory(self) -> Dict[str, Any]:
         """Retrieve stored expenses and insights"""
-        query = self.context.get("query", "")
-        month = self.context.get("month")
-        year = self.context.get("year")
-
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        user_id = self.context.get("user_id")
+        if not user_id:
+            logger.warning("No user_id provided for retrieving memory")
 
         results = {"expenses": [], "insights": [], "previous_analysis": None}
 
@@ -291,13 +292,13 @@ class MemoryManager(Agent):
                 cursor.execute(
                     """
                     SELECT * FROM expenses
-                    WHERE strftime('%Y', date) = ? AND strftime('%m', date) = ?
+                    WHERE user_id = ? AND strftime('%Y', date) = ? AND strftime('%m', date) = ?
                     ORDER BY date DESC
                 """,
-                    (str(year), f"{month:02d}"),
+                    (user_id, str(year), f"{month:02d}"),
                 )
             else:
-                cursor.execute("SELECT * FROM expenses ORDER BY date DESC LIMIT 100")
+                cursor.execute("SELECT * FROM expenses WHERE user_id = ? ORDER BY date DESC LIMIT 100", (user_id,))
 
             for row in cursor.fetchall():
                 expense = dict(row)
@@ -308,14 +309,14 @@ class MemoryManager(Agent):
                 cursor.execute(
                     """
                     SELECT * FROM insights
-                    WHERE year = ? AND month = ?
+                    WHERE user_id = ? AND year = ? AND month = ?
                     ORDER BY created_at DESC
                 """,
-                    (year, month),
+                    (user_id, year, month),
                 )
             else:
                 cursor.execute(
-                    "SELECT * FROM insights ORDER BY created_at DESC LIMIT 50"
+                    "SELECT * FROM insights WHERE user_id = ? ORDER BY created_at DESC LIMIT 50", (user_id,)
                 )
 
             for row in cursor.fetchall():
@@ -327,9 +328,9 @@ class MemoryManager(Agent):
                 cursor.execute(
                     """
                     SELECT analysis_data FROM analysis_cache
-                    WHERE year = ? AND month = ?
+                    WHERE user_id = ? AND year = ? AND month = ?
                 """,
-                    (year, month),
+                    (user_id, year, month),
                 )
                 row = cursor.fetchone()
                 if row:
@@ -399,17 +400,17 @@ class MemoryManager(Agent):
         result = self._retrieve_memory()
         return result.get("previous_analysis")
 
-    def set_budget(self, category: str, amount: float, month: int, year: int) -> bool:
+    def set_budget(self, user_id: int, category: str, amount: float, month: int, year: int) -> bool:
         """Set or update budget for a category"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         try:
             cursor.execute(
                 """
-                INSERT OR REPLACE INTO budgets (category, amount, month, year)
-                VALUES (?, ?, ?, ?)
+                INSERT OR REPLACE INTO budgets (user_id, category, amount, month, year)
+                VALUES (?, ?, ?, ?, ?)
             """,
-                (category, amount, month, year),
+                (user_id, category, amount, month, year),
             )
             conn.commit()
             self.get_budgets.cache_clear()
@@ -421,7 +422,7 @@ class MemoryManager(Agent):
             conn.close()
 
     @functools.lru_cache(maxsize=32)
-    def get_budgets(self, month: int, year: int) -> List[Dict[str, Any]]:
+    def get_budgets(self, user_id: int, month: int, year: int) -> List[Dict[str, Any]]:
         """Get all budgets for a specific month/year (cached)"""
         # We need to bypass cache if database is updated - for now simple cache
         conn = sqlite3.connect(self.db_path)
@@ -429,8 +430,8 @@ class MemoryManager(Agent):
         cursor = conn.cursor()
         try:
             cursor.execute(
-                "SELECT category, amount FROM budgets WHERE month = ? AND year = ?",
-                (month, year),
+                "SELECT category, amount FROM budgets WHERE user_id = ? AND month = ? AND year = ?",
+                (user_id, month, year),
             )
             return [dict(row) for row in cursor.fetchall()]
         except Exception as e:
@@ -440,7 +441,7 @@ class MemoryManager(Agent):
             conn.close()
 
     @functools.lru_cache(maxsize=32)
-    def get_spending_by_category(self, month: int, year: int) -> Dict[str, float]:
+    def get_spending_by_category(self, user_id: int, month: int, year: int) -> Dict[str, float]:
         """Get total spending per category for a month/year (cached)"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -451,10 +452,10 @@ class MemoryManager(Agent):
             cursor.execute(
                 """
                 SELECT category, SUM(amount) FROM expenses
-                WHERE strftime('%Y', date) = ? AND strftime('%m', date) = ?
+                WHERE user_id = ? AND strftime('%Y', date) = ? AND strftime('%m', date) = ?
                 GROUP BY category
             """,
-                (year_str, month_str),
+                (user_id, year_str, month_str),
             )
             return {row[0]: row[1] for row in cursor.fetchall()}
         except Exception as e:
@@ -463,13 +464,13 @@ class MemoryManager(Agent):
         finally:
             conn.close()
 
-    def get_all_expenses(self) -> List[Dict[str, Any]]:
+    def get_all_expenses(self, user_id: int) -> List[Dict[str, Any]]:
         """Get all expenses from the database"""
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         try:
-            cursor.execute("SELECT * FROM expenses ORDER BY date ASC")
+            cursor.execute("SELECT * FROM expenses WHERE user_id = ? ORDER BY date ASC", (user_id,))
             return [dict(row) for row in cursor.fetchall()]
         except Exception as e:
             self.logger.error(f"Error getting all expenses: {e}")
@@ -477,14 +478,14 @@ class MemoryManager(Agent):
         finally:
             conn.close()
 
-    def add_goal(self, name: str, target_amount: float, target_date: str) -> bool:
+    def add_goal(self, user_id: int, name: str, target_amount: float, target_date: str) -> bool:
         """Add a new savings goal"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         try:
             cursor.execute(
-                "INSERT INTO goals (name, target_amount, target_date) VALUES (?, ?, ?)",
-                (name, target_amount, target_date),
+                "INSERT INTO goals (user_id, name, target_amount, target_date) VALUES (?, ?, ?, ?)",
+                (user_id, name, target_amount, target_date),
             )
             conn.commit()
             return True
@@ -494,13 +495,13 @@ class MemoryManager(Agent):
         finally:
             conn.close()
 
-    def get_goals(self) -> List[Dict[str, Any]]:
+    def get_goals(self, user_id: int) -> List[Dict[str, Any]]:
         """Get all active goals"""
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         try:
-            cursor.execute("SELECT * FROM goals WHERE status = 'active'")
+            cursor.execute("SELECT * FROM goals WHERE user_id = ? AND status = 'active'", (user_id,))
             return [dict(row) for row in cursor.fetchall()]
         except Exception as e:
             self.logger.error(f"Error getting goals: {e}")
